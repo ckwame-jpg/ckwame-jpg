@@ -14,7 +14,7 @@ Computer Science graduate building production-style APIs, and algorithmic and co
 Exact salary-cap roster optimizer for daily fantasy. A 0/1 knapsack per position convolved over the salary axis, with legal roster shapes precomputed by bipartite matching, which is what makes overlapping FLEX slots need no special case at all.
 
 `C++17` `CMake` `GoogleTest`
-The first version was branch and bound: 16.8 billion nodes and 183 seconds on a 300-player pool. The DP returns the same answers in **3.8 ms**, a 48,000x speedup, verified against a brute-force oracle over every legal 9-player subset.
+The first version was branch and bound: 16.8 billion nodes and 126 seconds on a 300-player pool. The DP returns the same answers in **3.8 ms**, a 33,000x speedup, verified against a brute-force oracle over every legal 9-player subset.
 
 ### [season-sim](https://github.com/ckwame-jpg/season-sim)
 Monte Carlo fantasy season simulator that is bit-for-bit reproducible no matter how many threads it runs on. Three separate things break that guarantee: shared random state, floating-point accumulation order, and partitioning that follows the thread count. The last one was a real bug, caught by the test suite.
