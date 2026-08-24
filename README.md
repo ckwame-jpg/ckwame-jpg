@@ -10,6 +10,18 @@ Computer Science graduate building production-style APIs with tests and CI on ev
 
 ## What I'm building
 
+### [lineup-optimizer](https://github.com/ckwame-jpg/lineup-optimizer)
+Exact salary-cap roster optimizer for daily fantasy. A 0/1 knapsack per position convolved over the salary axis, with legal roster shapes precomputed by bipartite matching — which is what makes overlapping FLEX slots need no special case at all.
+
+`C++17` `CMake` `GoogleTest`
+→ The first version was branch and bound: 16.8 billion nodes and 183 seconds on a 300-player pool. The DP returns the same answers in **3.8 ms** — a 48,000× speedup, verified against a brute-force oracle over every legal 9-player subset.
+
+### [season-sim](https://github.com/ckwame-jpg/season-sim)
+Monte Carlo fantasy season simulator that is bit-for-bit reproducible no matter how many threads it runs on. Three separate things break that guarantee — shared random state, floating-point accumulation order, and partitioning that follows the thread count. The last one was a real bug, caught by the test suite.
+
+`Java 17` `Maven` `JUnit 5`
+→ 4.3M simulated seasons/sec at 5.1× scaling on 8 threads. Tests assert cross-thread determinism to exactly `0.0`, not "close enough".
+
 ### [Fantasy Football Toolkit](https://github.com/ckwame-jpg/fantasy-tool) · [live →](https://fantasy-tool.vercel.app)
 A full fantasy football platform, not a toy. Mock draftboard with ADP tiers, VORP-based trade analyzer, waiver-wire rankings, weekly lineup optimizer, matchups, projections and league sync — 15 feature areas in total.
 
@@ -41,7 +53,7 @@ Habit-tracking REST API with bcrypt-hashed credentials, JWT authentication and s
 **Languages** Python · TypeScript · JavaScript · SQL · Java · C++
 **Backend** FastAPI · SQLAlchemy · Celery · PostgreSQL · Redis · REST · WebSockets · JWT
 **Frontend** Next.js · React · Tailwind CSS
-**Infra** Docker · Docker Compose · GitHub Actions · Linux · pytest · Vercel · AWS S3
+**Infra** Docker · Docker Compose · GitHub Actions · Linux · CMake · Maven · pytest · GoogleTest · JUnit 5 · Vercel
 
 ---
 
@@ -49,4 +61,4 @@ Habit-tracking REST API with bcrypt-hashed credentials, JWT authentication and s
 
 Looking for backend, full-stack, and platform engineering roles.
 
-The three Python services above run their suites in GitHub Actions on every push. They also run standalone — clone one, `pip install -r requirements.txt`, `make test`, and 16 tests go green without a database, a Redis instance, or any environment setup, because the fixtures use in-memory SQLite and mock the external services.
+Everything above runs its test suite in GitHub Actions on every push, and everything runs standalone. Clone any of the Python services and `make test` puts 16 tests green with no database and no environment setup — the fixtures use in-memory SQLite and mock the external services. `lineup-optimizer` needs only CMake and a C++17 compiler; `season-sim` needs only a JDK.
