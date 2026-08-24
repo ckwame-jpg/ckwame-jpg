@@ -1,8 +1,8 @@
 # Christopher Prempeh
 
-**Backend engineering — Python, FastAPI, PostgreSQL, Redis, Docker.**
+**Backend and systems engineering — Python, C++, Java.**
 
-Computer Science graduate building production-style APIs with tests and CI on every project. By day I keep broadcast-critical Linux infrastructure online for live MLS matches and the FIFA World Cup 2026 — which is where I learned that the interesting part of a system is what happens when it breaks at the worst possible moment.
+Computer Science graduate building production-style APIs, and algorithmic and concurrent systems, with tests and CI on every project. By day I keep broadcast-critical Linux infrastructure online for live MLS matches and the FIFA World Cup 2026 — which is where I learned that the interesting part of a system is what happens when it breaks at the worst possible moment.
 
 📍 Dallas–Fort Worth, TX · 🌐 [chrisprem.xyz](https://chrisprem.xyz) · 💼 [LinkedIn](https://linkedin.com/in/christopher-prempeh) · ✉️ ckprempeh@outlook.com
 
