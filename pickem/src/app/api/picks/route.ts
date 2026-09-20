@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   if (!checkPasscode(req.headers.get(PASSCODE_HEADER))) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Wrong or missing passcode." }, { status: 401 });
   }
 
   let body: { playerId?: number; gameId?: number; pickedAbbr?: string | null };

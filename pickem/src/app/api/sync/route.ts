@@ -69,7 +69,7 @@ function authorized(req: Request): boolean {
 }
 
 export async function GET(req: Request) {
-  if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!authorized(req)) return NextResponse.json({ error: "Wrong or missing passcode." }, { status: 401 });
   const url = new URL(req.url);
   const season = url.searchParams.get("season");
   const week = url.searchParams.get("week");
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!authorized(req)) return NextResponse.json({ error: "Wrong or missing passcode." }, { status: 401 });
   let body: SyncTarget = {};
   try { body = await req.json(); } catch { /* empty body means "current week" */ }
   try {
