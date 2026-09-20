@@ -33,7 +33,7 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | one of the two | Server-only. Bypasses RLS entirely. Preferred when set. |
 | `SUPABASE_PUBLISHABLE_KEY` | one of the two | Server-only fallback. Maps to `anon`, which has RLS policies granting board access. |
-| `PICKEM_PASSCODE` | no | When set, editing picks or results needs this passcode. Unset leaves the board open. |
+| `PICKEM_PASSCODE` | no | When set, editing picks or results needs this passcode. Empty or unset leaves the board open, which is how it is deployed. |
 | `CRON_SECRET` | no | Lets the scheduled sync authenticate itself. Vercel sends it automatically once the variable exists. |
 
 ## Deployment
@@ -42,10 +42,13 @@ Vercel project `nfl-pickem`, linked to this repository with the root directory s
 to `pickem/`. Production tracks `main`; pushes to other branches get preview builds.
 
 Deployment protection is **off**, so the URL is publicly reachable — that is what
-lets Steven open it without a Vercel account. `PICKEM_PASSCODE` is therefore set in
-production: anyone can read the board, only someone with the passcode can change a
-pick or a result. Turning protection back on would make the passcode redundant, and
-dropping the passcode while the URL is public would leave the board world-editable.
+lets Steven open it without a Vercel account. `PICKEM_PASSCODE` is deliberately
+empty, so the board is open: anyone with the link can read it *and* edit picks and
+results. That was the call — a passcode on every write was more friction than it
+was worth for two people.
+
+The mechanism is still in the code, inert. Putting any value in `PICKEM_PASSCODE`
+turns it back on immediately; nothing else has to change.
 
 All four environment variables are configured in Vercel. The database key is
 `SUPABASE_PUBLISHABLE_KEY`, which maps to the `anon` role and carries explicit
