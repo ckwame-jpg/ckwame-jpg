@@ -1,0 +1,33 @@
+name: pickem
+
+on:
+  # Branch pushes are covered by the pull_request trigger. Listening for both
+  # on every branch ran the whole suite twice per push.
+  push:
+    branches: [main]
+    paths: ["pickem/**", ".github/workflows/pickem.yml"]
+  pull_request:
+    paths: ["pickem/**", ".github/workflows/pickem.yml"]
+
+# A newer push makes an in-flight run irrelevant.
+concurrency:
+  group: pickem-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pickem
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: pickem/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
