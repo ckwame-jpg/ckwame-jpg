@@ -70,17 +70,33 @@ export default function Board(
     startTransition(() => router.refresh());
   }
 
-  async function syncWeek() {
+  /**
+   * Pull a week from ESPN.
+   *
+   * With an empty board there is no real week to ask for -- the selector falls
+   * back to week 1 -- so the first load sends no target at all and takes
+   * whatever ESPN considers current, then moves the view to that week. Once
+   * games exist, syncing refreshes the week actually on screen.
+   */
+  async function syncWeek(useCurrent = false) {
     setBusy(true);
     setError(null);
-    const res = await post("/api/sync", { season, week });
+    const res = await post("/api/sync", useCurrent ? {} : { season, week });
     const body = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
       setError(body.error ?? "Sync failed. You can still set results by hand.");
       return;
     }
-    startTransition(() => router.refresh());
+    if (body.synced === 0 && body.note) {
+      setError(body.note);
+      return;
+    }
+    const landed = useCurrent ? body.current : null;
+    startTransition(() => {
+      if (landed) router.push(`/?season=${landed.season}&week=${landed.week}`);
+      router.refresh();
+    });
   }
 
   const unpicked = games.filter((g) => players.some((p) => pickOf(p.id, g.id) === null)).length;
@@ -127,7 +143,7 @@ export default function Board(
             })}
           </div>
           <button
-            onClick={syncWeek}
+            onClick={() => syncWeek(games.length === 0)}
             disabled={busy}
             className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3.5 py-2 text-sm font-medium hover:border-[var(--chris)] disabled:opacity-50"
           >
@@ -155,11 +171,11 @@ export default function Board(
         <div className="panel rounded-2xl p-8 text-center">
           <p className="text-[var(--muted)]">No games loaded for week {week}.</p>
           <button
-            onClick={syncWeek}
+            onClick={() => syncWeek(true)}
             disabled={busy}
             className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-2 text-sm font-medium hover:border-[var(--chris)] disabled:opacity-50"
           >
-            {busy ? "Loading…" : "Load this week from ESPN"}
+            {busy ? "Loading…" : "Load the current week from ESPN"}
           </button>
         </div>
       ) : (
