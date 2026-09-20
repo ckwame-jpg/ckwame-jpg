@@ -152,3 +152,84 @@ export function currentStreak(weeks: WeekSummary[], playerId: number): number {
   }
   return streak;
 }
+
+/**
+ * Longest run of weeks won at any point, not just the current one.
+ * A tied week breaks a run without belonging to either player.
+ */
+export function longestStreak(weeks: WeekSummary[], playerId: number): number {
+  let best = 0, run = 0;
+  for (const w of weeks) {
+    if (w.winners.length === 0) continue;
+    if (w.winners.length === 1 && w.winners[0] === playerId) {
+      run += 1;
+      if (run > best) best = run;
+    } else {
+      run = 0;
+    }
+  }
+  return best;
+}
+
+export type HeadToHead = {
+  seasons: number[];
+  standings: SeasonStanding[];
+  /** Every decided week across every season, in chronological order. */
+  weeks: WeekSummary[];
+  longest: Record<number, number>;
+};
+
+/**
+ * The running record across every season, which is the number worth arguing
+ * about. Weeks are ordered by season and then week so streaks read correctly
+ * across a season boundary.
+ */
+export function summarizeAllTime(
+  games: ScoredGame[],
+  picks: ScoredPick[],
+  playerIds: number[],
+): HeadToHead {
+  const seasons = [...new Set(games.map((g) => g.season))].sort((a, b) => a - b);
+  const weeks: WeekSummary[] = [];
+  for (const season of seasons) {
+    weeks.push(...summarizeSeason(season, games, picks, playerIds).weeks);
+  }
+
+  const standings: SeasonStanding[] = playerIds.map((id) => {
+    let correct = 0, wrong = 0, weeksWon = 0, weeksTied = 0;
+    for (const week of weeks) {
+      const row = week.byPlayer[id];
+      if (row) { correct += row.correct; wrong += row.wrong; }
+      if (week.winners.length === 1 && week.winners[0] === id) weeksWon += 1;
+      else if (week.winners.length > 1 && week.winners.includes(id)) weeksTied += 1;
+    }
+    const decided = correct + wrong;
+    return { playerId: id, correct, wrong, weeksWon, weeksTied, pct: decided ? correct / decided : 0 };
+  });
+
+  standings.sort((a, b) => b.correct - a.correct || b.weeksWon - a.weeksWon);
+
+  const longest: Record<number, number> = {};
+  for (const id of playerIds) longest[id] = longestStreak(weeks, id);
+
+  return { seasons, standings, weeks, longest };
+}
+
+export type Agreement = "split" | "agreed" | "incomplete";
+
+/**
+ * Whether the two pickers went different ways on a game.
+ *
+ * Games they called the same way cannot change who wins the week, so the board
+ * dims those and marks the splits -- that is where the week is actually decided.
+ */
+export function agreementOn(
+  gameId: number,
+  picks: ScoredPick[],
+  playerIds: number[],
+): Agreement {
+  const taken = playerIds.map((id) =>
+    picks.find((p) => p.gameId === gameId && p.playerId === id)?.pickedAbbr);
+  if (taken.some((t) => t === undefined)) return "incomplete";
+  return new Set(taken).size > 1 ? "split" : "agreed";
+}

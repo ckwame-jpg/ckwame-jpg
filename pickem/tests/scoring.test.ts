@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   gradePick, summarizeWeek, summarizeSeason, currentStreak,
+  longestStreak, summarizeAllTime, agreementOn,
   type ScoredGame, type ScoredPick,
 } from "@/lib/scoring";
 
@@ -141,5 +142,97 @@ describe("currentStreak", () => {
 
   it("is zero for the player who lost the latest week", () => {
     expect(currentStreak(weeks, STEVEN)).toBe(0);
+  });
+});
+
+describe("longestStreak", () => {
+  const games: ScoredGame[] = [
+    { id: 1, season: 2026, week: 1, status: "final", winnerAbbr: "GB"  },
+    { id: 2, season: 2026, week: 2, status: "final", winnerAbbr: "KC"  },
+    { id: 3, season: 2026, week: 3, status: "final", winnerAbbr: "SF"  },
+    { id: 4, season: 2026, week: 4, status: "final", winnerAbbr: "BUF" },
+  ];
+  // Chris takes weeks 1 and 2, loses 3, takes 4. Longest run is 2, current is 1.
+  const picks: ScoredPick[] = [
+    { playerId: CHRIS,  gameId: 1, pickedAbbr: "GB"  },
+    { playerId: STEVEN, gameId: 1, pickedAbbr: "CHI" },
+    { playerId: CHRIS,  gameId: 2, pickedAbbr: "KC"  },
+    { playerId: STEVEN, gameId: 2, pickedAbbr: "DEN" },
+    { playerId: CHRIS,  gameId: 3, pickedAbbr: "LAR" },
+    { playerId: STEVEN, gameId: 3, pickedAbbr: "SF"  },
+    { playerId: CHRIS,  gameId: 4, pickedAbbr: "BUF" },
+    { playerId: STEVEN, gameId: 4, pickedAbbr: "NYJ" },
+  ];
+  const weeks = summarizeSeason(2026, games, picks, [CHRIS, STEVEN]).weeks;
+
+  it("finds the best run, not the current one", () => {
+    expect(longestStreak(weeks, CHRIS)).toBe(2);
+    expect(currentStreak(weeks, CHRIS)).toBe(1);
+  });
+
+  it("is zero for a player who never won a week", () => {
+    expect(longestStreak(weeks, 99)).toBe(0);
+  });
+});
+
+describe("summarizeAllTime", () => {
+  const games: ScoredGame[] = [
+    { id: 1, season: 2025, week: 17, status: "final", winnerAbbr: "GB" },
+    { id: 2, season: 2026, week: 1,  status: "final", winnerAbbr: "KC" },
+    { id: 3, season: 2026, week: 2,  status: "final", winnerAbbr: "SF" },
+  ];
+  // Chris wins the last week of 2025 and both weeks of 2026: a run of 3 that
+  // has to survive the season boundary.
+  const picks: ScoredPick[] = [
+    { playerId: CHRIS,  gameId: 1, pickedAbbr: "GB"  },
+    { playerId: STEVEN, gameId: 1, pickedAbbr: "CHI" },
+    { playerId: CHRIS,  gameId: 2, pickedAbbr: "KC"  },
+    { playerId: STEVEN, gameId: 2, pickedAbbr: "DEN" },
+    { playerId: CHRIS,  gameId: 3, pickedAbbr: "SF"  },
+    { playerId: STEVEN, gameId: 3, pickedAbbr: "LAR" },
+  ];
+  const all = summarizeAllTime(games, picks, [CHRIS, STEVEN]);
+
+  it("spans every season", () => {
+    expect(all.seasons).toEqual([2025, 2026]);
+    expect(all.weeks).toHaveLength(3);
+  });
+
+  it("totals across seasons rather than per season", () => {
+    const chris = all.standings.find((s) => s.playerId === CHRIS)!;
+    expect(chris.correct).toBe(3);
+    expect(chris.weeksWon).toBe(3);
+  });
+
+  it("carries a streak across a season boundary", () => {
+    expect(all.longest[CHRIS]).toBe(3);
+    expect(all.longest[STEVEN]).toBe(0);
+  });
+
+  it("orders weeks chronologically, oldest first", () => {
+    expect(all.weeks.map((w) => [w.season, w.week])).toEqual([[2025, 17], [2026, 1], [2026, 2]]);
+  });
+});
+
+describe("agreementOn", () => {
+  const picks: ScoredPick[] = [
+    { playerId: CHRIS,  gameId: 1, pickedAbbr: "GB" },
+    { playerId: STEVEN, gameId: 1, pickedAbbr: "GB" },
+    { playerId: CHRIS,  gameId: 2, pickedAbbr: "KC" },
+    { playerId: STEVEN, gameId: 2, pickedAbbr: "DEN" },
+    { playerId: CHRIS,  gameId: 3, pickedAbbr: "SF" },
+  ];
+
+  it("calls it agreed when both took the same team", () => {
+    expect(agreementOn(1, picks, [CHRIS, STEVEN])).toBe("agreed");
+  });
+
+  it("calls it split when they went different ways", () => {
+    expect(agreementOn(2, picks, [CHRIS, STEVEN])).toBe("split");
+  });
+
+  it("calls it incomplete until both have picked", () => {
+    expect(agreementOn(3, picks, [CHRIS, STEVEN])).toBe("incomplete");
+    expect(agreementOn(4, picks, [CHRIS, STEVEN])).toBe("incomplete");
   });
 });

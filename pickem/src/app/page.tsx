@@ -1,5 +1,5 @@
 import { db, type GameRow, type PickRow, type PlayerRow } from "@/lib/db";
-import { summarizeWeek } from "@/lib/scoring";
+import { summarizeWeek, summarizeSeason } from "@/lib/scoring";
 import Board from "@/components/Board";
 import WeekPicker from "@/components/WeekPicker";
 
@@ -39,10 +39,19 @@ export default async function Home(
   const weekGames = games.filter((g) => g.season === season && g.week === week);
   const gameIds = weekGames.map((g) => g.id);
 
-  const { data: pickRows } = gameIds.length
-    ? await supabase.from("picks").select("*").in("game_id", gameIds)
-    : { data: [] as PickRow[] };
-  const picks = (pickRows ?? []) as PickRow[];
+  const { data: allPickRows } = await supabase.from("picks").select("*");
+  const allPicks = (allPickRows ?? []) as PickRow[];
+  const gameIdSet = new Set(gameIds);
+  const picks = allPicks.filter((p) => gameIdSet.has(p.game_id));
+
+  const scoredGames = games.map((g) => ({
+    id: g.id, season: g.season, week: g.week, status: g.status, winnerAbbr: g.winner_abbr,
+  }));
+  const scoredPicks = allPicks.map((p) => ({
+    playerId: p.player_id, gameId: p.game_id, pickedAbbr: p.picked_abbr,
+  }));
+
+  const seasonSummary = summarizeSeason(season, scoredGames, scoredPicks, playerRows.map((p) => p.id));
 
   const summary = summarizeWeek(
     season, week,
@@ -68,6 +77,7 @@ export default async function Home(
         games={weekGames}
         picks={picks}
         summary={summary}
+        seasonStandings={seasonSummary.standings}
         season={season}
         week={week}
       />

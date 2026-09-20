@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db, type GameRow, type PickRow, type PlayerRow } from "@/lib/db";
-import { summarizeSeason, currentStreak } from "@/lib/scoring";
+import { summarizeSeason, summarizeAllTime, currentStreak } from "@/lib/scoring";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +25,16 @@ export default async function Standings(
   const seasons = [...new Set(games.map((g) => g.season))].sort((a, b) => b - a);
   const season = Number(params.season) || seasons[0] || new Date().getFullYear();
 
-  const summary = summarizeSeason(
-    season,
-    games.map((g) => ({ id: g.id, season: g.season, week: g.week, status: g.status, winnerAbbr: g.winner_abbr })),
-    picks.map((p) => ({ playerId: p.player_id, gameId: p.game_id, pickedAbbr: p.picked_abbr })),
-    playerRows.map((p) => p.id),
-  );
+  const scoredGames = games.map((g) => ({
+    id: g.id, season: g.season, week: g.week, status: g.status, winnerAbbr: g.winner_abbr,
+  }));
+  const scoredPicks = picks.map((p) => ({
+    playerId: p.player_id, gameId: p.game_id, pickedAbbr: p.picked_abbr,
+  }));
+  const playerIds = playerRows.map((p) => p.id);
+
+  const summary = summarizeSeason(season, scoredGames, scoredPicks, playerIds);
+  const allTime = summarizeAllTime(scoredGames, scoredPicks, playerIds);
 
   const nameOf = (id: number) => playerRows.find((p) => p.id === id)?.display_name ?? `#${id}`;
   const colorOf = (id: number) => PLAYER_COLOR[playerRows.findIndex((p) => p.id === id)] ?? "var(--text)";
@@ -68,6 +72,50 @@ export default async function Standings(
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="panel rounded-2xl p-5">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">All time</h2>
+          <span className="text-xs text-[var(--muted)]">
+            {allTime.seasons.length === 1
+              ? `${allTime.seasons[0]}`
+              : `${allTime.seasons[0]}–${allTime.seasons[allTime.seasons.length - 1]}`}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                <th className="py-2 pr-4 font-medium">&nbsp;</th>
+                <th className="py-2 pr-4 font-medium">Correct</th>
+                <th className="py-2 pr-4 font-medium">Pct</th>
+                <th className="py-2 pr-4 font-medium">Weeks won</th>
+                <th className="py-2 font-medium">Longest run</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allTime.standings.map((s) => (
+                <tr key={s.playerId} className="border-t border-[var(--line)]">
+                  <td className="py-2.5 pr-4 font-semibold" style={{ color: colorOf(s.playerId) }}>
+                    {nameOf(s.playerId)}
+                  </td>
+                  <td className="py-2.5 pr-4 tabular-nums">
+                    {s.correct}<span className="text-[var(--muted)]">–{s.wrong}</span>
+                  </td>
+                  <td className="py-2.5 pr-4 tabular-nums">{(s.pct * 100).toFixed(0)}%</td>
+                  <td className="py-2.5 pr-4 tabular-nums">
+                    {s.weeksWon}
+                    {s.weeksTied > 0 && (
+                      <span className="text-[var(--muted)]"> · {s.weeksTied} tied</span>
+                    )}
+                  </td>
+                  <td className="py-2.5 tabular-nums">{allTime.longest[s.playerId] ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

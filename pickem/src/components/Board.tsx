@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { GameRow, PickRow, PlayerRow } from "@/lib/db";
-import type { WeekSummary } from "@/lib/scoring";
+import type { WeekSummary, SeasonStanding } from "@/lib/scoring";
 import { team } from "@/lib/teams";
 import { post } from "@/lib/client-passcode";
 
@@ -16,9 +16,10 @@ function kickoffLabel(iso: string) {
 }
 
 export default function Board(
-  { players, games, picks, summary, season, week }:
+  { players, games, picks, summary, seasonStandings, season, week }:
   { players: PlayerRow[]; games: GameRow[]; picks: PickRow[];
-    summary: WeekSummary; season: number; week: number },
+    summary: WeekSummary; seasonStandings: SeasonStanding[];
+    season: number; week: number },
 ) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -31,6 +32,17 @@ export default function Board(
   );
 
   const pickOf = (playerId: number, gameId: number) => local[`${playerId}:${gameId}`] ?? null;
+
+  /**
+   * Games both picked the same way cannot change who wins the week, so they are
+   * dimmed and the splits are marked. Recomputed from local state so the board
+   * re-reads correctly the instant a pick changes.
+   */
+  function agreement(gameId: number): "split" | "agreed" | "incomplete" {
+    const taken = players.map((p) => pickOf(p.id, gameId));
+    if (taken.some((t) => t === null)) return "incomplete";
+    return new Set(taken).size > 1 ? "split" : "agreed";
+  }
 
   async function setPick(playerId: number, gameId: number, abbr: string) {
     const key = `${playerId}:${gameId}`;
@@ -71,23 +83,45 @@ export default function Board(
     startTransition(() => router.refresh());
   }
 
+  const unpicked = games.filter((g) => players.some((p) => pickOf(p.id, g.id) === null)).length;
+
   return (
     <div className="space-y-4">
-      <div className="panel rounded-2xl p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-5">
+      {/* Season on top, this week beneath it. */}
+      <div className="panel rounded-2xl px-4 py-3.5">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--muted)]">
+          {season} season
+        </div>
+        <div className="mt-1 flex items-baseline gap-5">
+          {players.map((p, i) => {
+            const row = seasonStandings.find((s) => s.playerId === p.id);
+            return (
+              <div key={p.id} className="flex items-baseline gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: PLAYER_COLOR[i] }}>
+                  {p.display_name}
+                </span>
+                <span className="text-2xl font-bold tabular-nums">{row?.correct ?? 0}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="my-3 h-px bg-[var(--line)]" />
+
+        <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--muted)]">
+          Week {week}
+        </div>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-baseline gap-5">
             {players.map((p, i) => {
               const row = summary.byPlayer[p.id];
               const won = summary.winners.length === 1 && summary.winners[0] === p.id;
               return (
-                <div key={p.id}>
-                  <div className="text-xs uppercase tracking-wide" style={{ color: PLAYER_COLOR[i] }}>
+                <div key={p.id} className="flex items-baseline gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: PLAYER_COLOR[i] }}>
                     {p.display_name}{won && " 👑"}
-                  </div>
-                  <div className="text-3xl font-bold tabular-nums">{row?.correct ?? 0}</div>
-                  <div className="text-xs text-[var(--muted)]">
-                    {row?.decided ?? 0} graded · {row?.picked ?? 0} picked
-                  </div>
+                  </span>
+                  <span className="text-lg font-bold tabular-nums">{row?.correct ?? 0}</span>
                 </div>
               );
             })}
@@ -100,8 +134,14 @@ export default function Board(
             {busy ? "Syncing…" : "Sync scores"}
           </button>
         </div>
+
         {summary.winners.length > 1 && summary.finalGames > 0 && (
-          <div className="mt-3 text-sm text-[var(--muted)]">Dead even this week.</div>
+          <div className="mt-2.5 text-sm text-[var(--muted)]">Dead even this week.</div>
+        )}
+        {unpicked > 0 && games.length > 0 && (
+          <div className="mt-2.5 text-xs text-[var(--muted)]">
+            {unpicked} {unpicked === 1 ? "game still needs" : "games still need"} a pick.
+          </div>
         )}
       </div>
 
@@ -127,13 +167,41 @@ export default function Board(
           {games.map((g) => {
             const decided = g.winner_abbr !== null;
             const sides = [g.away_abbr, g.home_abbr];
+            const state = agreement(g.id);
             return (
-              <div key={g.id} className="panel rounded-2xl p-4">
+              <div
+                key={g.id}
+                className="panel relative overflow-hidden rounded-2xl p-4 pl-[18px] transition-opacity"
+                style={{ opacity: state === "agreed" ? 0.72 : 1 }}
+              >
+                {state === "split" && (
+                  <span
+                    aria-hidden
+                    className="absolute bottom-3 left-0 top-3 w-[3px] rounded-r"
+                    style={{ background: "var(--split)" }}
+                  />
+                )}
+
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="font-semibold">
-                    {team(g.away_abbr).abbr}
-                    <span className="mx-1.5 text-[var(--muted)]">@</span>
-                    {team(g.home_abbr).abbr}
+                  <div className="flex items-center gap-2 font-semibold">
+                    <span>
+                      {team(g.away_abbr).abbr}
+                      <span className="mx-1.5 font-normal text-[var(--muted)]">@</span>
+                      {team(g.home_abbr).abbr}
+                    </span>
+                    {state === "split" && (
+                      <span
+                        className="rounded-full border px-1.5 text-[9.5px] font-bold uppercase tracking-[0.1em]"
+                        style={{ color: "var(--split)", borderColor: "var(--split)" }}
+                      >
+                        Split
+                      </span>
+                    )}
+                    {state === "agreed" && (
+                      <span className="rounded-full border border-[var(--line)] px-1.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">
+                        Both
+                      </span>
+                    )}
                   </div>
                   <div className="text-right text-xs text-[var(--muted)]">
                     {g.status === "final" ? (
@@ -169,6 +237,7 @@ export default function Board(
                               <button
                                 key={abbr}
                                 onClick={() => setPick(p.id, g.id, abbr)}
+                                aria-pressed={isPicked}
                                 className="rounded-xl border px-3 py-2 text-sm font-medium transition"
                                 style={{
                                   borderColor: isPicked ? PLAYER_COLOR[i] : "var(--line)",
