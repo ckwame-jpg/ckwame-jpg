@@ -35,6 +35,21 @@ npm run dev
 | `PICKEM_PASSCODE` | no | When set, editing picks or results needs this passcode. Unset leaves the board open. |
 | `CRON_SECRET` | no | Lets the scheduled sync authenticate itself. Vercel sends it automatically once the variable exists. |
 
+## Deployment
+
+Vercel project `nfl-pickem`, linked to this repository with the root directory set
+to `pickem/`. Production tracks `main`; pushes to other branches get preview builds.
+
+Deployment protection is **off**, so the URL is publicly reachable — that is what
+lets Steven open it without a Vercel account. `PICKEM_PASSCODE` is therefore set in
+production: anyone can read the board, only someone with the passcode can change a
+pick or a result. Turning protection back on would make the passcode redundant, and
+dropping the passcode while the URL is public would leave the board world-editable.
+
+`NEXT_PUBLIC_SUPABASE_URL`, `PICKEM_PASSCODE` and `CRON_SECRET` are configured in
+Vercel. `SUPABASE_SERVICE_ROLE_KEY` has to be added by hand from the Supabase
+dashboard — nothing reads or writes without it.
+
 ## Getting a week onto the board
 
 1. Open the board and press **Sync scores** (or `GET /api/sync?season=2026&week=2`).
