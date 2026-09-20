@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { db, type GameRow, type PickRow, type PlayerRow } from "@/lib/db";
+import { db, isConfigured, type GameRow, type PickRow, type PlayerRow } from "@/lib/db";
 import { summarizeSeason, summarizeAllTime, currentStreak } from "@/lib/scoring";
+import NotConfigured from "@/components/NotConfigured";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,8 @@ const PLAYER_COLOR = ["var(--chris)", "var(--steven)"];
 export default async function Standings(
   { searchParams }: { searchParams: Promise<{ season?: string }> },
 ) {
+  if (!isConfigured()) return <NotConfigured />;
+
   const params = await searchParams;
   const supabase = db();
 

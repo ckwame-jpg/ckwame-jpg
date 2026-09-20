@@ -10,6 +10,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  */
 let cached: SupabaseClient | null = null;
 
+/** Whether the server has what it needs to reach the database. */
+export function isConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 export function db(): SupabaseClient {
   if (cached) return cached;
 

@@ -1,7 +1,8 @@
-import { db, type GameRow, type PickRow, type PlayerRow } from "@/lib/db";
+import { db, isConfigured, type GameRow, type PickRow, type PlayerRow } from "@/lib/db";
 import { summarizeWeek, summarizeSeason } from "@/lib/scoring";
 import Board from "@/components/Board";
 import WeekPicker from "@/components/WeekPicker";
+import NotConfigured from "@/components/NotConfigured";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,8 @@ function defaultWeek(games: Pick<GameRow, "season" | "week" | "kickoff_at">[]) {
 export default async function Home(
   { searchParams }: { searchParams: Promise<{ season?: string; week?: string }> },
 ) {
+  if (!isConfigured()) return <NotConfigured />;
+
   const params = await searchParams;
   const supabase = db();
 
