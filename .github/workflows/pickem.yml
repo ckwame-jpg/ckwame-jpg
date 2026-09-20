@@ -1,10 +1,18 @@
 name: pickem
 
 on:
+  # Branch pushes are covered by the pull_request trigger. Listening for both
+  # on every branch ran the whole suite twice per push.
   push:
+    branches: [main]
     paths: ["pickem/**", ".github/workflows/pickem.yml"]
   pull_request:
     paths: ["pickem/**", ".github/workflows/pickem.yml"]
+
+# A newer push makes an in-flight run irrelevant.
+concurrency:
+  group: pickem-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
