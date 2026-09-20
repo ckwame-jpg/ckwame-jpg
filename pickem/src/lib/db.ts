@@ -3,27 +3,38 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 /**
  * Server-only Supabase client.
  *
- * RLS is enabled on every table with no policies, so the service-role key is
- * what makes any read or write possible. It must never reach the browser:
- * everything in this app talks to the database from a server component or a
- * route handler.
+ * Everything in this app talks to the database from a server component or a
+ * route handler, so neither key ever reaches the browser.
  */
 let cached: SupabaseClient | null = null;
 
+/**
+ * The key this server uses to reach Postgres.
+ *
+ * The service-role key is preferred and bypasses RLS entirely. Falling back to
+ * the publishable key is what lets the board run without anyone pasting a
+ * secret; that key maps to the `anon` role, which carries explicit RLS
+ * policies. Either way the key stays on the server -- note the deliberate
+ * absence of a NEXT_PUBLIC_ prefix -- and writes are gated by PICKEM_PASSCODE.
+ */
+function serverKey(): string | undefined {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+}
+
 /** Whether the server has what it needs to reach the database. */
 export function isConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && serverKey());
 }
 
 export function db(): SupabaseClient {
   if (cached) return cached;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = serverKey();
   if (!url || !key) {
     throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. " +
-        "Copy .env.example to .env.local and fill them in.",
+      "Missing NEXT_PUBLIC_SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY or " +
+        "SUPABASE_PUBLISHABLE_KEY. Copy .env.example to .env.local and fill them in.",
     );
   }
 

@@ -9,7 +9,10 @@ export default function NotConfigured() {
       </p>
       <ol className="mt-4 max-w-prose list-decimal space-y-1.5 pl-5 text-sm text-[var(--muted)]">
         <li>Supabase dashboard → <span className="text-[var(--text)]">nfl-pickem</span> → Project Settings → API</li>
-        <li>Copy the <code className="text-[var(--text)]">service_role</code> key</li>
+        <li>
+          Copy the <code className="text-[var(--text)]">service_role</code> key (or the
+          publishable one, as <code className="text-[var(--text)]">SUPABASE_PUBLISHABLE_KEY</code>)
+        </li>
         <li>
           Vercel → <span className="text-[var(--text)]">nfl-pickem</span> → Settings → Environment Variables →
           add it as <code className="text-[var(--text)]">SUPABASE_SERVICE_ROLE_KEY</code>

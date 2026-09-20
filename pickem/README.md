@@ -31,7 +31,8 @@ npm run dev
 | Variable | Required | What it does |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | yes | Server-only. RLS is on with no policies, so this key is what permits any read or write. |
+| `SUPABASE_SERVICE_ROLE_KEY` | one of the two | Server-only. Bypasses RLS entirely. Preferred when set. |
+| `SUPABASE_PUBLISHABLE_KEY` | one of the two | Server-only fallback. Maps to `anon`, which has RLS policies granting board access. |
 | `PICKEM_PASSCODE` | no | When set, editing picks or results needs this passcode. Unset leaves the board open. |
 | `CRON_SECRET` | no | Lets the scheduled sync authenticate itself. Vercel sends it automatically once the variable exists. |
 
@@ -46,9 +47,13 @@ production: anyone can read the board, only someone with the passcode can change
 pick or a result. Turning protection back on would make the passcode redundant, and
 dropping the passcode while the URL is public would leave the board world-editable.
 
-`NEXT_PUBLIC_SUPABASE_URL`, `PICKEM_PASSCODE` and `CRON_SECRET` are configured in
-Vercel. `SUPABASE_SERVICE_ROLE_KEY` has to be added by hand from the Supabase
-dashboard — nothing reads or writes without it.
+All four environment variables are configured in Vercel. The database key is
+`SUPABASE_PUBLISHABLE_KEY`, which maps to the `anon` role and carries explicit
+RLS policies, rather than the service-role key — that choice trades some
+security for needing no secret pasted by hand. Anyone holding the publishable
+key could edit pick data directly, bypassing the passcode. To tighten it, set
+`SUPABASE_SERVICE_ROLE_KEY` (the app prefers it whenever present) and drop the
+`board_access` policies.
 
 ## Getting a week onto the board
 
